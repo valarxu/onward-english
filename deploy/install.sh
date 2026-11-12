@@ -76,10 +76,6 @@ PY
 if [[ -z "$ACCOUNT" ]]; then echo 'No existing production ACME account found. Configure one before requesting a certificate.' >&2; exit 1; fi
 certbot certonly --webroot --webroot-path "$WEB_DIR/acme" --domain "$DOMAIN" --cert-name "$DOMAIN" --account "$ACCOUNT" --non-interactive --keep-until-expiring
 sed "s/__DOMAIN__/$DOMAIN/g" "$APP_DIR/deploy/nginx.conf.template" > "$TMP_CONF"
-# Nginx before 1.25.1 uses the http2 listen option instead of the http2 directive.
-if ! nginx -v 2>&1 | python3 -c 'import re,sys; m=re.search(r"nginx/(\d+)\.(\d+)\.(\d+)",sys.stdin.read()); sys.exit(0 if m and tuple(map(int,m.groups())) >= (1,25,1) else 1)'; then
-    sed -i -e 's/listen 443 ssl;/listen 443 ssl http2;/' -e 's/listen \[::\]:443 ssl;/listen [::]:443 ssl http2;/' -e '/^[[:space:]]*http2 on;/d' "$TMP_CONF"
-fi
 install -m 644 "$TMP_CONF" "$CONF"
 ln -sfn "$CONF" "$ENABLED"
 if ! nginx -t; then restore_config; exit 1; fi
